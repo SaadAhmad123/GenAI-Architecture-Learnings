@@ -87,6 +87,7 @@ Here's how it works:
 2. We leverage the existing request-based rate limiting mechanisms of API gateways.
 
 The system operates optimally when:
+
 $$
 \text{Number of requests per minute} \times (\text{Number of input tokens} + \text{Number of output tokens}) = \text{Total token limit of the model per minute}
 $$
@@ -120,11 +121,13 @@ $$
 This formula allows us to calculate:
 
 1. The optimal rate limit (R) for a given input size:
+
 $$
 R = \frac{T}{IN + OUT} \tag{2}
 $$
 
 2. The maximum input size (IN) for a given rate limit:
+
 $$
 IN = \frac{T}{R} - OUT \tag{3}
 $$
