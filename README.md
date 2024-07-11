@@ -83,7 +83,7 @@ The key observation is that regardless of input size, LLMs typically have a cons
 
 Here's how it works:
 
-1. For each LLM input, we optimistically reserve the maximum output token count (e.g., 4096 tokens).
+1. For each LLM input, we optimistically reserve the maximum output token count (e.g., 4096 tokens). We are making an assumption in our system.
 2. We leverage the existing request-based rate limiting mechanisms of API gateways.
 
 The system operates optimally when:
