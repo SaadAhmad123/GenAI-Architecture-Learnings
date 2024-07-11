@@ -98,7 +98,7 @@ $$
 \begin{aligned}
 R &= \text{Number of requests per minute (enforced by API Gateway and it rate limiting methods)} \\
 IN &= \text{Number of input tokens per request (enforced by the function after the API gateway)} \\
-OUT &= \text{Number of output tokens per request} = 4096 (given current models) \\
+OUT &= \text{Number of output tokens per request} = 4096 \text{(given current models)} \\
 T &= \text{Total token limit of the model per minute}
 \end{aligned}
 $$
