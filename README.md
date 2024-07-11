@@ -75,7 +75,7 @@ Both approaches add complexity to your system architecture and require careful c
 
 > **Personal Experience:** I personally have gone down this rabbit-hole where I implemented similar throttling mechanism and have experienced it in all it complexity. I implemented a queue -> (token rate limiting lambda + dynamodb + dynamodb locking mechanism) -> queue -> LLM. It works well now but I would not recommend ever implementing it and I will be moving away from it to the idea explained next
 
-### 3. An optimitic mathematical approach
+### 3. Optimistic/ Greedy Token Allocation: A Mathematical Approach
 
 This approach offers an elegant solution to the token management challenge, drawing inspiration from observed patterns in Large Language Model (LLM) behavior. It's akin to a restaurant that allocates a fixed amount of "dessert ingredients" for each main course order, regardless of the main course's size.
 
@@ -83,7 +83,7 @@ The key observation is that regardless of input size, LLMs typically have a cons
 
 Here's how it works:
 
-1. For each LLM input, we optimistically reserve the maximum output token count (e.g., 4096 tokens). We are making an assumption in our system.
+1. For each LLM input, we optimistically reserve the maximum output token count (e.g., 4096 tokens). This can be lowered based on the use case as well. We are making an assumption in our system.
 2. We leverage the existing request-based rate limiting mechanisms of API gateways.
 
 The system operates optimally when:
