@@ -38,7 +38,7 @@ However, this method raises significant privacy concerns. It's like having the m
 
 While this doesn't necessarily mean the provider can't be trusted, it introduces another layer of complexity. You'd need to engage in further discussions with your provider and seek assurances about how the data is handled during this operation.
 
-### 2. **Crafting Your Own Token Gatekeeper: A Delicate Balancing Act:**
+### 2. **Crafting Your Own Token Gatekeeper:**
 
 Imagine you're running a high-end restaurant with a unique twist: instead of limiting the number of guests, you're limiting the total amount of ingredients used across all dishes. This is similar to implementing your own token rate limit algorithm behind the API Gateway.
 
