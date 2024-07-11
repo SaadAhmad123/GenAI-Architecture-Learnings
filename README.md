@@ -89,7 +89,7 @@ Here's how it works:
 The system operates optimally when:
 
 $$
-\text{Number of requests per minute} \times (\text{Number of input tokens} + \text{Number of output tokens}) = \text{Total token limit of the model per minute}
+\text{Number of requests per minute} \times (\text{Number of input tokens per request} + \text{Number of output tokens per request}) = \text{Total token limit of the model per minute}
 $$
 
 For mathematical ease, let:
