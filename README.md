@@ -77,7 +77,7 @@ Both approaches add complexity to your system architecture and require careful c
 
 ### 3. Optimistic/ Greedy Token Allocation: A Mathematical Approach
 
-This approach offers an elegant solution to the token management challenge, drawing inspiration from observed patterns in Large Language Model (LLM) behavior. It's akin to a restaurant that allocates a fixed amount of "dessert ingredients" for each main course order, regardless of the main course's size.
+This approach offers an elegant solution to the token management challenge, drawing inspiration from observed patterns in Large Language Model (LLM) behavior.
 
 The key observation is that regardless of input size, LLMs typically have a consistent maximum output token limit (currently around 4096 tokens). This consistency allows us to make robust assumptions and set parameters accordingly.
 
