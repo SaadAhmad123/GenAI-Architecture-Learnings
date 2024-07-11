@@ -40,8 +40,6 @@ While this doesn't necessarily mean the provider can't be trusted, it introduces
 
 ### 2. **Crafting Your Own Token Gatekeeper:**
 
-Imagine you're running a high-end restaurant with a unique twist: instead of limiting the number of guests, you're limiting the total amount of ingredients used across all dishes. This is similar to implementing your own token rate limit algorithm behind the API Gateway.
-
 In this approach, you're the head chef who must carefully monitor and control the flow of ingredients (tokens) while ensuring the kitchen (API) runs smoothly. Here's how it might work:
 
 - Requests pass through the API Gateway untouched, preserving their security and privacy.
