@@ -239,16 +239,6 @@ Proposed allocation:
 
 This enhanced scenario provides a clearer explanation of the system's design, goals, and implementation strategy, making it easier for team members to understand and implement the chatbot system effectively.
 
-**Implementation**
-
-This can now be implemented easily
-
-- Set up the API gateway to enforce a rate limit of 200 requests per minute.
-- Configure the function after the API gateway to limit input prompts to 400 tokens and history size of 900 token.
-- The function should fetch only the most relevent 3000 tokens of context and then send it all to the model with 
-`max_tokens` field set to 400 tokens
-
-
 
 ## Conclusion
 
