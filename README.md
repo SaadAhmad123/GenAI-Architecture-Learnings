@@ -121,7 +121,8 @@ With constraints:
 $$
 \begin{aligned}
 R &\leq \text{Maximum LLM provider API rate limit} \\
-IN &\leq \text{Maximum LLM input token limit}
+IN &\leq \text{Maximum LLM input token limit} \\
+OUT &\leq \text{Maximum LLM output token limit}
 \end{aligned}
 $$
 
