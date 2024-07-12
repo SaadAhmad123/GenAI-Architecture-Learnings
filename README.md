@@ -23,68 +23,77 @@ This difference means our usual ways of managing API limits don't work well for 
 
 ### 1. **Token Limiting at the API Gateway Level:**
 
-Picture this as having a specialized maitre d' at the restaurant entrance who not only counts guests but also estimates the total amount of food each party might order.
+Imagine a specialized maître d' at a restaurant entrance, adept at not only counting incoming guests but also estimating the total order size each party will request.
 
-This approach is the most straightforward, provided your platform offers an API gateway service with this feature. Here's how it would work:
+This method is straightforward if your API gateway supports this functionality. Here’s a step-by-step breakdown:
 
-- The API gateway intercepts each request, as it's designed to do.
-- In addition to counting requests and overall request size, it decrypts the request and examines the field containing the prompt for the Large Language Model.
+- The API gateway intercepts each incoming request.
+- It goes beyond mere counting; the gateway decrypts the request and scrutinizes the content intended for the Large Language Model, particularly analyzing the prompt size.
 
-However, this method raises significant privacy concerns. It's like having the maitre d' open each guest's takeout container before they enter the restaurant. This approach:
+This approach, however, introduces significant privacy and security considerations. Comparatively, it’s akin to the maître d' inspecting the contents of each guest’s takeout box before allowing them entry, which:
 
-- Potentially violates the principle of data privacy during transit.
-- Exposes the request content to the API Gateway provider before it reaches your implemented code.
-- Raises security and privacy questions, necessitating additional Service Level Agreements (SLAs) and complicating an already intricate security plan.
+- May infringe on data privacy norms during transmission.
+- Prematurely exposes the request’s content to the API Gateway provider, potentially before your own systems process it.
+- Necessitates the formulation of enhanced Service Level Agreements (SLAs) to address these added security and privacy concerns, thereby adding complexity to your security framework.
 
-While this doesn't necessarily mean the provider can't be trusted, it introduces another layer of complexity. You'd need to engage in further discussions with your provider and seek assurances about how the data is handled during this operation.
+Additionally, while this method effectively manages input tokens, it overlooks the combined rate limiting of both input and output tokens by the underlying model.
+
+This doesn't imply that providers are inherently untrustworthy, but it does layer in additional complexity. You would need to engage in detailed discussions with your provider to ensure that data handling protocols during these operations meet your security and privacy standards.
 
 ### 2. **Crafting Your Own Token Gatekeeper:**
 
-In this approach, you're the head chef who must carefully monitor and control the flow of ingredients (tokens) while ensuring the kitchen (API) runs smoothly. Here's how it might work:
+This approach involves developing a bespoke service that acts as a mediator between your API Gateway and the Large Language Model (LLM). Here’s how it unfolds:
 
-- Requests pass through the API Gateway untouched, preserving their security and privacy.
-- Before reaching the Large Language Model (LLM), requests are routed to a service you've designed and manage.
-- This service determines the remaining token quota for the current time window.
+- Requests seamlessly pass through the API Gateway, retaining their original security and privacy attributes.
+- These requests are then directed to a purpose-built service that assesses and manages the token quota for each time window before they advance to the LLM.
 
-Now, let's consider implementing a simple leaky bucket algorithm (a simple rate limiting algorithm) in this scenario:
+Consider employing a straightforward rate limiting mechanism, like the leaky bucket algorithm, in this setup:
 
-a) The Always-On Approach:
+a) **The Always-On Approach:**
 
-- You set up a dedicated virtual machine with allocated memory in which you implement the token bucket. Think of it as a just a piece of code which intialises a number in memory representing the LLM maximum token limit.
-- All requests check the "token bucket" in memory when coming in only.
-- If the bucket is empty, the request is rejected.
-- If not, the required tokens are subtracted, and the request proceeds to the LLM.
+- Establish a dedicated virtual machine equipped with a memory-resident token bucket. This bucket initializes with a number reflecting the LLM's maximum token capacity.
+- Each incoming request checks this token bucket. If the bucket has enough tokens, they are deducted, and the request is processed; if not, the request is denied.
 
-However, this system lacks scalability. Scaling would require Kubernetes clusters, and each cluster would have its own in-memory bucket, leading to inconsistencies as we only have one LLM serving all these requests.
+This method is straightforward but struggles with scalability. Expanding this setup would necessitate deploying Kubernetes clusters, each with its own token bucket, potentially causing inconsistencies when there's only one LLM handling all requests.
 
-b) The Distributed Approach:
+b) **The Distributed Approach:**
 
-- You use a global state, storing the "token bucket" in an external database or Redis.
-- This allows for easier scaling but introduces new challenges:
-  - Ensuring consistency across multiple requests (ACID compliance)
-  - Managing potential latency issues
-  - Implementing distributed locking mechanisms
+- Shift to a global state by housing the token bucket in a centralized database or a caching system like Redis.
+- This adjustment aids scalability and facilitates managing a higher volume of requests, but it also brings about challenges in ensuring transactional consistency, managing latency, and implementing distributed locks.
 
-It's akin to having a central ingredient inventory system for all your restaurant branches, but now you need to ensure real-time accuracy and prevent conflicts when multiple chefs access it simultaneously.
+Both strategies introduce significant complexity to your system architecture, requiring a careful evaluation of the trade-offs between scalability, consistency, and performance.
 
-Both approaches add complexity to your system architecture and require careful consideration of trade-offs between scalability, consistency, and performance. Like a master chef balancing flavors in a complex dish, you'll need to fine-tune your approach based on your specific needs and constraints.
+**Additional Consideration:**
 
-**One more thing this approach misses out on** is the fact that the LLM takes into account both the input and output token for throttling mechanism. This approach can take into account only the inbound token, managing the outbound tokens and adding that into the mix an even bigger challenge.
+The primary focus of this token management strategy is on regulating inbound tokens, without addressing how the LLM considers both input and output tokens in its throttling mechanism. Integrating a system that also manages outbound tokens adds another layer of complexity and is a crucial factor in maintaining system balance and efficiency.
 
-> **Personal Experience:** I personally have gone down this rabbit-hole where I implemented similar throttling mechanism and have experienced it in all it complexity. I implemented a queue -> (token rate limiting lambda + dynamodb + dynamodb locking mechanism) -> queue -> LLM. It works well now but I would not recommend ever implementing it and I will be moving away from it to the idea explained next
+Each method must be precisely tailored to meet the specific operational demands and constraints of your application, highlighting the importance of a meticulous approach to determine the most fitting architecture.
+
 
 ### 3. Optimistic/ Greedy Token Allocation: A Mathematical Approach
 
-This approach offers an elegant solution to the token management challenge, drawing inspiration from observed patterns in Large Language Model (LLM) behavior.
+This approach offers an elegant solution to token management for Large Language Models (LLMs), leveraging existing API gateway rate limiting mechanisms and asserting input and output token sizes in the function that calls the LLM. By modeling the problem mathematically, we can achieve a predictable design without adding unnecessary technical complexity.
 
-The key observation is that regardless of input size, LLMs typically have a consistent maximum output token limit (currently around 4096 tokens). This consistency allows us to make robust assumptions and set parameters accordingly.
+#### The Model
 
-Here's how it works:
+Consider an API gateway integrating with a function (e.g., AWS Lambda) that calls an LLM with token limits. The system components work as follows:
 
-1. For each LLM input, we optimistically reserve the maximum output token count (e.g., 4096 tokens). This can be lowered based on the use case as well. We are making an assumption in our system.
-2. We leverage the existing request-based rate limiting mechanisms of API gateways.
+- API gateway: Applies request rate limiting
+- Lambda function: Enforces max input prompt token limit
+- LLM call: Sets max_token field to impose output token limit
 
-The system operates optimally when:
+Given the LLM's total tokens-per-minute rate limit, we aim to calculate the optimal:
+
+- Request rate limit (or queue polling rate)
+- Input token size
+- Output token size
+
+#### Key Observations
+1. LLMs typically have a consistent maximum output token limit (currently around 4096 tokens).
+2. We can optimistically reserve a specific output token count based on requirements.
+
+
+Now for the system to operate optimally:
 
 $$
 \text{Number of requests per minute} \times (\text{Number of input tokens per request} + \text{Number of output tokens per request}) = \text{Total token limit of the model per minute}
@@ -116,7 +125,8 @@ IN &\leq \text{Maximum LLM input token limit}
 \end{aligned}
 $$
 
-This formula allows us to calculate:
+From this, we can derive:
+
 
 1. The optimal rate limit (R) for a given input size:
 
@@ -130,26 +140,17 @@ $$
 IN = \frac{T}{R} - OUT \tag{3}
 $$
 
-Based on the above formulae, we can derive some more helpful metrics
+Additional metrics:
 
-**Formula 1:** Calculating Reserved Output Tokens
+1. Calculating Reserved Output Tokens
 
-$$ \text{Reserved Output Tokens} = R \times OUT \tag{4}$$ 
+$$ \text{Reserved Output Tokens} = R \times OUT \tag{4} $$ 
 
-**Where:**
-R = Requests per minute (rate limit) OUT = Output tokens per request (fixed at 4096)
+2. Percentage of Total LLM Limit Reserved for Output
 
-**Explanation:** This formula calculates the total number of tokens reserved for output based on the rate limit and the fixed output token limit. It assumes that each request will use the maximum allowed output tokens.
+$$ \text{Percentage Reserved for Output} = \frac{R \times OUT}{T} \times 100% \tag{5} $$
 
-**Formula 2:** Percentage of Total LLM Limit Reserved for Output
-
-$$ \text{Percentage Reserved for Output} = \frac{R \times OUT}{T} \times 100% $$
-
-**Where:** R = Requests per minute (rate limit) OUT = Output tokens per request (fixed at 4096) T = Total model token limit per minute
-
-**Explanation:** This formula calculates the percentage of the total LLM token limit that is being reserved for output tokens. It divides the total reserved output tokens by the total model token limit and converts it to a percentage.
-
-This approach maps to existing API gateway rate limit control by providing a clear, mathematically-derived value for R via (2), which can be directly implemented as the gateway's rate limit. The function input size control is represented by IN via (3), which can be enforced within the function that processes requests after they pass through the API gateway.
+This approach maps to existing API gateway rate limit control by providing a clear, mathematically-derived value for R via (2), which can be directly implemented as the gateway's rate limit. The function input size control is represented by IN via (3), which can be enforced within the function that processes requests after they pass through the API gateway. The output size constraint can be imposed on the model by sending the `max_tokens` field to the set by the limit to the model
 
 From an implementation perspective, this method offers several advantages:
 
@@ -158,11 +159,97 @@ From an implementation perspective, this method offers several advantages:
 - **Efficiency:** By making an optimistic assumption about output tokens, it allows for maximum utilization of the LLM's capabilities without overcomplicating the control mechanism.
 - **Flexibility:** The formulas can be easily adjusted if LLM token limits change in the future.
 
-#### Tradeoff
+#### Tradeoffs
 
-The tradeoff here is that the higher the rate limit, the smaller the max input token size and bigger the output reserve limit which will not be fully utilized
+*Pros:*
 
-This approach strikes a balance between the need for token management and the desire for a straightforward, maintainable system. It leverages existing API gateway capabilities while providing a clear method for controlling input size, resulting in a robust yet uncomplicated solution for Generative AI API management.
+- Simple and predictable
+- Leverages existing API gateway features
+- Easy to reason about and debug
+- No additional infrastructure required
+
+*Cons:*
+
+- May over-reserve tokens in some scenarios
+- Potential underutilization of LLM capacity
+
+The Optimistic Token Allocation approach offers a balanced solution for many LLM applications, providing simplicity and effectiveness. However, specific use cases with high-security requirements or unique needs may benefit from alternative approaches. The choice ultimately depends on your application's scale, privacy requirements, and available resources.
 
 > In the python notebook, `api-limits-design.ipynb`, I have implented these function and tabulated different constraints for given popular models if they are server by either API Gateway of a Queue polling mechanism (the idea remains the same)
 
+#### Example scenarios
+
+Let's explore this in some senarios
+
+### Scenario 1: High-frequency, Low-input Token Use Case for a Support Center Chatbot
+
+**Context:**
+We're implementing a chatbot system for a support center using the Retrieval-Augmented Generation (RAG) pattern. The system needs to handle a high volume of domain-specific questions efficiently.
+
+**System Overview:**
+1. An API gateway receives incoming queries.
+2. Queries are routed to a handler function.
+3. The handler function retrieves relevant context from a vector store.
+4. The context and query are sent to a Large Language Model (LLM) for processing.
+5. The LLM generates an appropriate response.
+
+**Design Goals:**
+- Handle up to 200 requests per minute.
+- Optimize token usage within the LLM's constraints.
+- Balance between input context, message history, and output generation.
+
+**Given Parameters:**
+- Model total token limit per minute (T): 1,000,000 tokens
+- Maximum Model API request rate limt: 500 requests per minute
+- Desired maximum rate limit (R): 200 requests per minute
+- Fixed maximum output token (OUT): 400 tokens (approximately 300 words) - Changes to this will change all subsequent calculations
+
+**Calculated Input Token Limit:**
+Using the formula: IN = (T / R) - OUT
+IN = (1,000,000 / 200) - 400 = 4,600 tokens
+
+**Token Allocation Strategy:**
+Total available input tokens per request: 4,600 (approximately 3,450 words)
+Proposed allocation:
+1. Current input query: 400 tokens (300 words)
+2. Message history: 1,200 tokens (900 words)
+3. Retrieved context: 3,000 tokens (2,250 words)
+
+**Implementation Guidelines:**
+1. API Gateway Configuration:
+   - Set rate limit to 200 requests per minute.
+
+2. Handler Function Design:
+   - Limit input query to 400 tokens.
+   - Maintain a message history of up to 1,200 tokens.
+   - Retrieve and filter the most relevant 3,000 tokens of context from the vector store.
+
+3. LLM Integration:
+   - Combine input query, message history, and retrieved context.
+   - Set the `max_tokens` parameter to 400 for the LLM response.
+
+**Benefits of This Approach:**
+- Maximizes the use of available tokens within the LLM's constraints.
+- Provides a balance between current input, historical context, and retrieved information.
+- Ensures consistent response times by limiting output token generation.
+
+**Considerations:**
+- The token allocation between input query, history, and context can be adjusted based on specific use case requirements.
+- Regular monitoring and adjustment may be necessary to optimize performance and token usage.
+
+This enhanced scenario provides a clearer explanation of the system's design, goals, and implementation strategy, making it easier for team members to understand and implement the chatbot system effectively.
+
+**Implementation**
+
+This can now be implemented easily
+
+- Set up the API gateway to enforce a rate limit of 200 requests per minute.
+- Configure the function after the API gateway to limit input prompts to 400 tokens and history size of 900 token.
+- The function should fetch only the most relevent 3000 tokens of context and then send it all to the model with 
+`max_tokens` field set to 400 tokens
+
+
+
+## Conclusion
+
+In conclusion, each approach has its merits and drawbacks. The choice depends on your specific use case, scale, privacy requirements, and available resources. The Optimistic/Greedy Token Allocation seems to offer a good balance of simplicity and effectiveness for many scenarios, but for applications with very specific needs or high-security requirements, one of the other approaches might be more suitable.
