@@ -181,7 +181,7 @@ The Optimistic Token Allocation approach offers a balanced solution for many LLM
 
 Let's explore this in some senarios
 
-### Scenario 1: High-frequency, Low-input Token Use Case for a Support Center Chatbot
+#### Scenario 1: High-frequency, Low-input Token Use Case for a Support Center Chatbot
 
 **Context:**
 We're implementing a chatbot system for a support center using the Retrieval-Augmented Generation (RAG) pattern. The system needs to handle a high volume of domain-specific questions efficiently.
